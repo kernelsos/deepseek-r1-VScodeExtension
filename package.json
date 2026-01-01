@@ -1,0 +1,26 @@
+{
+  "name": "llm-ex",
+  "displayName": "llm-ex",
+  "description": "An extension to connect large language models into VS Code.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "llm-ex.start",
+        "title": "Chat with Qwen"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "ollama": "^0.6.3"
+  }
+}
