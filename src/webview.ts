@@ -34,11 +34,18 @@ export function getWebviewContent(): string {
             margin-bottom: 10px;
         }
 
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
         .model-selector-container {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
         }
 
         .model-selector-container label {
@@ -51,7 +58,7 @@ export function getWebviewContent(): string {
             background-color: var(--vscode-dropdown-background);
             color: var(--vscode-dropdown-foreground);
             border: 1px solid var(--vscode-dropdown-border);
-            border-radius: 5px;
+            border-radius: 4px;
             font-family: var(--vscode-font-family);
             font-size: var(--vscode-font-size);
             cursor: pointer;
@@ -66,6 +73,92 @@ export function getWebviewContent(): string {
         #modelSelect:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        .context-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .context-btn {
+            padding: 6px 12px;
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--vscode-font-family);
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        .context-btn:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .context-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .context-files-container {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .context-files-container.hidden {
+            display: none;
+        }
+
+        .context-files-header {
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .context-file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background-color: var(--vscode-list-inactiveSelectionBackground);
+            border-radius: 3px;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .context-file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--vscode-foreground);
+        }
+
+        .context-file-remove {
+            background: none;
+            border: none;
+            color: var(--vscode-errorForeground);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .context-file-remove:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .empty-context {
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
         }
 
         #chatContainer {
@@ -219,23 +312,27 @@ export function getWebviewContent(): string {
 
         /* Scrollbar styling */
         #chatContainer::-webkit-scrollbar,
-        #prompt::-webkit-scrollbar {
+        #prompt::-webkit-scrollbar,
+        .context-files-container::-webkit-scrollbar {
             width: 8px;
         }
 
         #chatContainer::-webkit-scrollbar-track,
-        #prompt::-webkit-scrollbar-track {
+        #prompt::-webkit-scrollbar-track,
+        .context-files-container::-webkit-scrollbar-track {
             background: var(--vscode-editor-background);
         }
 
         #chatContainer::-webkit-scrollbar-thumb,
-        #prompt::-webkit-scrollbar-thumb {
+        #prompt::-webkit-scrollbar-thumb,
+        .context-files-container::-webkit-scrollbar-thumb {
             background: var(--vscode-scrollbarSlider-background);
             border-radius: 4px;
         }
 
         #chatContainer::-webkit-scrollbar-thumb:hover,
-        #prompt::-webkit-scrollbar-thumb:hover {
+        #prompt::-webkit-scrollbar-thumb:hover,
+        .context-files-container::-webkit-scrollbar-thumb:hover {
             background: var(--vscode-scrollbarSlider-hoverBackground);
         }
     </style>
@@ -243,11 +340,23 @@ export function getWebviewContent(): string {
 <body>
     <div class="header">
         <h2>🤖 Chat with LLM</h2>
-        <div class="model-selector-container">
-            <label for="modelSelect">Model:</label>
-            <select id="modelSelect">
-                <option value="">Loading models...</option>
-            </select>
+        <div class="controls-row">
+            <div class="model-selector-container">
+                <label for="modelSelect">Model:</label>
+                <select id="modelSelect">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+            <div class="context-buttons">
+                <button class="context-btn" id="addCurrentFileBtn">📄 Add Current File</button>
+                <button class="context-btn" id="addMultipleFilesBtn">📁 Add Multiple Files</button>
+            </div>
+        </div>
+        <div class="context-files-container hidden" id="contextFilesContainer">
+            <div class="context-files-header">Files in Context:</div>
+            <div id="contextFilesList">
+                <div class="empty-context">No files added</div>
+            </div>
         </div>
     </div>
     
@@ -266,12 +375,62 @@ export function getWebviewContent(): string {
         const promptInput = document.getElementById('prompt');
         const chatContainer = document.getElementById('chatContainer');
         const modelSelect = document.getElementById('modelSelect');
+        const addCurrentFileBtn = document.getElementById('addCurrentFileBtn');
+        const addMultipleFilesBtn = document.getElementById('addMultipleFilesBtn');
+        const contextFilesContainer = document.getElementById('contextFilesContainer');
+        const contextFilesList = document.getElementById('contextFilesList');
         
         let isGenerating = false;
         let currentAssistantMessage = null;
+        let contextFiles = [];
 
         // Request available models on load
         vscode.postMessage({ command: 'getModels' });
+
+        // Add current file to context
+        addCurrentFileBtn.addEventListener('click', () => {
+            vscode.postMessage({ command: 'addCurrentFile' });
+        });
+
+        // Add multiple files to context
+        addMultipleFilesBtn.addEventListener('click', () => {
+            vscode.postMessage({ command: 'addMultipleFiles' });
+        });
+
+        // Remove file from context
+        function removeFile(filePath) {
+            contextFiles = contextFiles.filter(f => f.path !== filePath);
+            updateContextUI();
+        }
+
+        // Update context files UI
+        function updateContextUI() {
+            if (contextFiles.length === 0) {
+                contextFilesContainer.classList.add('hidden');
+                contextFilesList.innerHTML = '<div class="empty-context">No files added</div>';
+            } else {
+                contextFilesContainer.classList.remove('hidden');
+                contextFilesList.innerHTML = '';
+                contextFiles.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'context-file-item';
+                    
+                    const fileName = document.createElement('span');
+                    fileName.className = 'context-file-name';
+                    fileName.textContent = file.path;
+                    fileName.title = file.path;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'context-file-remove';
+                    removeBtn.textContent = '✕';
+                    removeBtn.onclick = () => removeFile(file.path);
+                    
+                    fileItem.appendChild(fileName);
+                    fileItem.appendChild(removeBtn);
+                    contextFilesList.appendChild(fileItem);
+                });
+            }
+        }
 
         // Auto-resize textarea
         promptInput.addEventListener('input', () => {
@@ -318,11 +477,12 @@ export function getWebviewContent(): string {
             // Add user message
             addMessage('user', text);
             
-            // Send to extension
+            // Send to extension with context files
             vscode.postMessage({ 
                 command: 'chat', 
                 text: text,
-                model: selectedModel
+                model: selectedModel,
+                contextFiles: contextFiles
             });
             
             // Clear input and reset height
@@ -335,6 +495,8 @@ export function getWebviewContent(): string {
             actionBtn.classList.add('stop-btn');
             promptInput.disabled = true;
             modelSelect.disabled = true;
+            addCurrentFileBtn.disabled = true;
+            addMultipleFilesBtn.disabled = true;
 
             // Create assistant message placeholder
             currentAssistantMessage = addMessage('assistant', '');
@@ -352,6 +514,8 @@ export function getWebviewContent(): string {
             actionBtn.classList.remove('stop-btn');
             promptInput.disabled = false;
             modelSelect.disabled = false;
+            addCurrentFileBtn.disabled = false;
+            addMultipleFilesBtn.disabled = false;
             promptInput.focus();
             currentAssistantMessage = null;
         }
@@ -381,7 +545,7 @@ export function getWebviewContent(): string {
         }
 
         window.addEventListener('message', event => {
-            const { command, text, models } = event.data;
+            const { command, text, models, files } = event.data;
             
             if (command === 'modelsList') {
                 modelSelect.innerHTML = '';
@@ -399,6 +563,14 @@ export function getWebviewContent(): string {
                     option.textContent = 'No models found';
                     modelSelect.appendChild(option);
                 }
+            } else if (command === 'filesAdded') {
+                // Add new files to context, avoiding duplicates
+                files.forEach(file => {
+                    if (!contextFiles.some(f => f.path === file.path)) {
+                        contextFiles.push(file);
+                    }
+                });
+                updateContextUI();
             } else if (command === 'chatResponse') {
                 if (currentAssistantMessage) {
                     currentAssistantMessage.textContent = text;

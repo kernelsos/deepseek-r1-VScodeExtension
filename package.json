@@ -12,7 +12,7 @@
     "commands": [
       {
         "command": "llm-ex.start",
-        "title": "Chat with Qwen"
+        "title": "Chat with LLM"
       }
     ]
   },
