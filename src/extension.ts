@@ -7,10 +7,10 @@ export function activate(context: vscode.ExtensionContext) {
     
     let abortController: AbortController | null = null;
 
-    const disposable = vscode.commands.registerCommand('llm-ex.start', () => {
+    const disposable = vscode.commands.registerCommand('llm-ex.start', async () => {
         const panel = vscode.window.createWebviewPanel(
-            'qwen2.5:7b',
-            'Chat with Qwen',
+            'llmChat',
+            'Chat with LLM',
             vscode.ViewColumn.One,
             { enableScripts: true }
         );
@@ -19,16 +19,32 @@ export function activate(context: vscode.ExtensionContext) {
 
         panel.webview.onDidReceiveMessage(
             async (message) => {
-                if (message.command === 'chat') {
+                if (message.command === 'getModels') {
+                    // Fetch available models from Ollama
+                    try {
+                        const modelsList = await ollama.list();
+                        panel.webview.postMessage({
+                            command: 'modelsList',
+                            models: modelsList.models
+                        });
+                    } catch (err) {
+                        vscode.window.showErrorMessage('Failed to fetch models: ' + String(err));
+                        panel.webview.postMessage({
+                            command: 'modelsList',
+                            models: []
+                        });
+                    }
+                } else if (message.command === 'chat') {
                     const userPrompt = message.text;
+                    const selectedModel = message.model;
                     let responseText = '';
                     
-                
+                    // Create new abort controller for this request
                     abortController = new AbortController();
 
                     try {
                         const streamResponse = await ollama.chat({
-                            model: 'qwen2.5:7b',
+                            model: selectedModel,
                             messages: [{ role: 'user', content: userPrompt }],
                             stream: true
                         });

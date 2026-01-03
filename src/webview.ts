@@ -23,11 +23,49 @@ export function getWebviewContent(): string {
             flex-direction: column;
         }
 
+        .header {
+            margin-bottom: 20px;
+        }
+
         h2 {
             color: var(--vscode-foreground);
-            margin-bottom: 20px;
             font-size: 1.5em;
             font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .model-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .model-selector-container label {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        #modelSelect {
+            padding: 6px 12px;
+            background-color: var(--vscode-dropdown-background);
+            color: var(--vscode-dropdown-foreground);
+            border: 1px solid var(--vscode-dropdown-border);
+            border-radius: 5px;
+            font-family: var(--vscode-font-family);
+            font-size: var(--vscode-font-size);
+            cursor: pointer;
+            outline: none;
+            min-width: 200px;
+        }
+
+        #modelSelect:focus {
+            border-color: var(--vscode-focusBorder);
+        }
+
+        #modelSelect:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         #chatContainer {
@@ -203,10 +241,18 @@ export function getWebviewContent(): string {
     </style>
 </head>
 <body>
-    <h2>🤖 Chat with Qwen</h2>
+    <div class="header">
+        <h2>🤖 Chat with LLM</h2>
+        <div class="model-selector-container">
+            <label for="modelSelect">Model:</label>
+            <select id="modelSelect">
+                <option value="">Loading models...</option>
+            </select>
+        </div>
+    </div>
     
     <div id="chatContainer">
-        <div class="empty-state">Start a conversation by typing your question below...</div>
+        <div class="empty-state">Select a model and start a conversation...</div>
     </div>
     
     <div id="inputContainer">
@@ -219,9 +265,13 @@ export function getWebviewContent(): string {
         const actionBtn = document.getElementById('actionBtn');
         const promptInput = document.getElementById('prompt');
         const chatContainer = document.getElementById('chatContainer');
+        const modelSelect = document.getElementById('modelSelect');
         
         let isGenerating = false;
         let currentAssistantMessage = null;
+
+        // Request available models on load
+        vscode.postMessage({ command: 'getModels' });
 
         // Auto-resize textarea
         promptInput.addEventListener('input', () => {
@@ -251,7 +301,13 @@ export function getWebviewContent(): string {
 
         function sendMessage() {
             const text = promptInput.value.trim();
+            const selectedModel = modelSelect.value;
+            
             if (!text) return;
+            if (!selectedModel) {
+                alert('Please select a model first!');
+                return;
+            }
             
             // Remove empty state if exists
             const emptyState = chatContainer.querySelector('.empty-state');
@@ -263,7 +319,11 @@ export function getWebviewContent(): string {
             addMessage('user', text);
             
             // Send to extension
-            vscode.postMessage({ command: 'chat', text });
+            vscode.postMessage({ 
+                command: 'chat', 
+                text: text,
+                model: selectedModel
+            });
             
             // Clear input and reset height
             promptInput.value = '';
@@ -274,6 +334,7 @@ export function getWebviewContent(): string {
             actionBtn.textContent = 'Stop';
             actionBtn.classList.add('stop-btn');
             promptInput.disabled = true;
+            modelSelect.disabled = true;
 
             // Create assistant message placeholder
             currentAssistantMessage = addMessage('assistant', '');
@@ -290,6 +351,7 @@ export function getWebviewContent(): string {
             actionBtn.textContent = 'Send';
             actionBtn.classList.remove('stop-btn');
             promptInput.disabled = false;
+            modelSelect.disabled = false;
             promptInput.focus();
             currentAssistantMessage = null;
         }
@@ -300,7 +362,7 @@ export function getWebviewContent(): string {
             
             const header = document.createElement('div');
             header.className = 'message-header';
-            header.textContent = role === 'user' ? 'You' : 'Qwen';
+            header.textContent = role === 'user' ? 'You' : modelSelect.options[modelSelect.selectedIndex].text;
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
@@ -319,9 +381,25 @@ export function getWebviewContent(): string {
         }
 
         window.addEventListener('message', event => {
-            const { command, text } = event.data;
+            const { command, text, models } = event.data;
             
-            if (command === 'chatResponse') {
+            if (command === 'modelsList') {
+                modelSelect.innerHTML = '';
+                
+                if (models && models.length > 0) {
+                    models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No models found';
+                    modelSelect.appendChild(option);
+                }
+            } else if (command === 'chatResponse') {
                 if (currentAssistantMessage) {
                     currentAssistantMessage.textContent = text;
                     scrollToBottom();
