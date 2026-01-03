@@ -18,5 +18,9 @@
 * And Now You can test your extension, select and try out different models, debug, and chat locally inside vscode.
 
 # Issues
-* If you are facing any issues, then you can contact me and ask questions. Thank you!
-## enjoy
+* If you are facing any issues, then you can contact me and ask questions. 
+* Thank you!
+## Enjoy
+
+# Screenshots of the working project
+<img width="1918" height="786" alt="image" src="https://github.com/user-attachments/assets/d18cc77a-325c-4965-90da-62713c3ba99e" />
