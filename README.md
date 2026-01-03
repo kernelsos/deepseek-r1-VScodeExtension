@@ -23,4 +23,17 @@
 ## Enjoy
 
 # Screenshots of the working project
+
+
+## 1
+
+
 <img width="1918" height="786" alt="image" src="https://github.com/user-attachments/assets/d18cc77a-325c-4965-90da-62713c3ba99e" />
+
+
+
+## 2
+
+
+<img width="1918" height="846" alt="image" src="https://github.com/user-attachments/assets/eaaea160-cee7-4dac-ba1d-feb29282b7b8" />
+
