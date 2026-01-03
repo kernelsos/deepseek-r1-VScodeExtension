@@ -1,20 +1,14 @@
-# llm-ex README
-
-This is the README for your extension "llm-ex". After writing up a brief description, we recommend including the following sections.
+# VSCode deepseek Coding Agent.
+* I built a VSCode extension powered by a powerful open-source deepseek-R1 model. 
 
 ## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* No API KEY
+* You can download and select from different powerful models for coding.
+* Since models are downloaded locally, 100% privacy (you are not agreeing to send your prompt and keystrokes to government).
+* You can add multiple files to the context and ask questions about your code. 
 
 ## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+* Install Ollama and download a LLM Model
 
 ## Extension Settings
 
