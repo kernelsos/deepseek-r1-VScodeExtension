@@ -25,6 +25,9 @@
 # Screenshots of the working project
 
 
+# VS Code MarketPlace 
+https://marketplace.visualstudio.com/items?itemName=kernelsos.llm-ex
+
 ## 1
 
 
